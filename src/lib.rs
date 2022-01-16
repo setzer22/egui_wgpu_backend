@@ -82,6 +82,24 @@ struct SizedBuffer {
     size: usize,
 }
 
+/// Allows methods to take both a `Texture` and a `TextureView`
+pub trait TextureOrView {
+    /// Converts this object into a `TextureView`. This is a no-op for
+    /// `TextureViews`.
+    fn to_texture_view(self) -> wgpu::TextureView; 
+}
+
+impl TextureOrView for wgpu::TextureView {
+    fn to_texture_view(self) -> wgpu::TextureView {
+        self
+    }
+}
+impl TextureOrView for wgpu::Texture {
+    fn to_texture_view(self) -> wgpu::TextureView {
+        self.create_view(&wgpu::TextureViewDescriptor::default())
+    }
+}
+
 /// RenderPass to render a egui based GUI.
 pub struct RenderPass {
     render_pipeline: wgpu::RenderPipeline,
@@ -496,7 +514,7 @@ impl RenderPass {
     pub fn egui_texture_from_wgpu_texture(
         &mut self,
         device: &wgpu::Device,
-        texture: &wgpu::Texture,
+        texture: impl TextureOrView,
         texture_filter: wgpu::FilterMode,
     ) -> egui::TextureId {
         self.egui_texture_from_wgpu_texture_with_sampler_options(
@@ -546,7 +564,7 @@ impl RenderPass {
     pub fn egui_texture_from_wgpu_texture_with_sampler_options(
         &mut self,
         device: &wgpu::Device,
-        texture: &wgpu::Texture,
+        texture: impl TextureOrView,
         sampler_descriptor: wgpu::SamplerDescriptor,
     ) -> egui::TextureId {
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
@@ -562,7 +580,7 @@ impl RenderPass {
                 wgpu::BindGroupEntry {
                     binding: 0,
                     resource: wgpu::BindingResource::TextureView(
-                        &texture.create_view(&wgpu::TextureViewDescriptor::default()),
+                        &texture.to_texture_view(),
                     ),
                 },
                 wgpu::BindGroupEntry {

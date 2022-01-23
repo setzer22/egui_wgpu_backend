@@ -284,7 +284,7 @@ impl RenderPass {
         });
         rpass.push_debug_group("egui_pass");
 
-        self.execute_with_renderpass(&mut rpass, paint_jobs, screen_descriptor)?;
+        self.execute_with_renderpass(&mut rpass, paint_jobs, screen_descriptor, 1.0)?;
 
         rpass.pop_debug_group();
 
@@ -297,6 +297,7 @@ impl RenderPass {
         rpass: &mut wgpu::RenderPass<'rpass>,
         paint_jobs: &[egui::epaint::ClippedMesh],
         screen_descriptor: &ScreenDescriptor,
+        zoom_level: f32,
     ) -> Result<(), BackendError> {
         rpass.set_pipeline(&self.render_pipeline);
 
@@ -343,7 +344,7 @@ impl RenderPass {
                     continue;
                 }
 
-                rpass.set_scissor_rect(x, y, width, height);
+                rpass.set_scissor_rect(x, y, (width as f32 / zoom_level) as u32, (height as f32 / zoom_level) as u32);
             }
             let bind_group = self.get_texture_bind_group(mesh.texture_id)?;
             rpass.set_bind_group(1, bind_group, &[]);

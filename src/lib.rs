@@ -8,7 +8,7 @@ use std::{borrow::Cow, collections::HashMap, fmt::Formatter, num::NonZeroU32};
 
 use bytemuck::{Pod, Zeroable};
 pub use wgpu;
-use wgpu::{util::DeviceExt};
+use wgpu::util::DeviceExt;
 
 /// Error that the backend can return.
 #[derive(Debug)]
@@ -344,7 +344,12 @@ impl RenderPass {
                     continue;
                 }
 
-                rpass.set_scissor_rect(x, y, (width as f32 / zoom_level) as u32, (height as f32 / zoom_level) as u32);
+                rpass.set_scissor_rect(
+                    (x as f32 / zoom_level) as u32,
+                    (y as f32 / zoom_level) as u32,
+                    (width as f32 / zoom_level) as u32,
+                    (height as f32 / zoom_level) as u32,
+                );
             }
             let bind_group = self.get_texture_bind_group(mesh.texture_id)?;
             rpass.set_bind_group(1, bind_group, &[]);
@@ -617,9 +622,7 @@ impl RenderPass {
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: wgpu::BindingResource::TextureView(
-                        texture,
-                    ),
+                    resource: wgpu::BindingResource::TextureView(texture),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,

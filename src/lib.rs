@@ -284,7 +284,7 @@ impl RenderPass {
         });
         rpass.push_debug_group("egui_pass");
 
-        self.execute_with_renderpass(&mut rpass, paint_jobs, screen_descriptor, 1.0)?;
+        self.execute_with_renderpass(&mut rpass, paint_jobs, screen_descriptor, 1.0, None)?;
 
         rpass.pop_debug_group();
 
@@ -298,7 +298,10 @@ impl RenderPass {
         paint_jobs: &[egui::epaint::ClippedMesh],
         screen_descriptor: &ScreenDescriptor,
         zoom_level: f32,
+        resolution: Option<[u32; 2]>,
     ) -> Result<(), BackendError> {
+        let resolution = resolution.unwrap_or([u32::MAX, u32::MAX]);
+
         rpass.set_pipeline(&self.render_pipeline);
 
         rpass.set_bind_group(0, &self.uniform_bind_group, &[]);
@@ -339,17 +342,22 @@ impl RenderPass {
                 let width = width.min(physical_width - x);
                 let height = height.min(physical_height - y);
 
-                // Skip rendering with zero-sized clip areas.
-                if width == 0 || height == 0 {
-                    continue;
+                let x = (x as f32 / zoom_level) as u32;
+                let y = (y as f32 / zoom_level) as u32;
+                let width = (width as f32 / zoom_level) as u32;
+                let height = (height as f32 / zoom_level) as u32;
+
+                // Skip rendering when arguments to SetScissor would cause a
+                // wgpu validation error to prevent a panic.
+                if width == 0
+                    || height == 0
+                    || x + width > resolution[0]
+                    || y + height > resolution[1]
+                {
+                    continue
                 }
 
-                rpass.set_scissor_rect(
-                    (x as f32 / zoom_level) as u32,
-                    (y as f32 / zoom_level) as u32,
-                    (width as f32 / zoom_level) as u32,
-                    (height as f32 / zoom_level) as u32,
-                );
+                rpass.set_scissor_rect(x, y, width, height);
             }
             let bind_group = self.get_texture_bind_group(mesh.texture_id)?;
             rpass.set_bind_group(1, bind_group, &[]);
